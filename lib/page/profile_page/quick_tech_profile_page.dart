@@ -25,6 +25,8 @@ class _QuickTechProfilePageState extends State<QuickTechProfilePage> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final token = GetStorage().read(StorageKeys.accessToken);
+    debugPrint('Token:$token');
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),

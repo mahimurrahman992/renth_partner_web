@@ -243,7 +243,7 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: Material(
-        color: Colors.white,
+        color: mainColor,
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
@@ -266,14 +266,14 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.15),
+                    color: white.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     icon,
                     size: 28,
                     color:
-                        accentColor == mainColor ? Colors.black87 : accentColor,
+                        black,
                   ),
                 ),
                 const SizedBox(width: 18),

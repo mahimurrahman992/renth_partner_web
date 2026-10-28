@@ -103,6 +103,7 @@ Widget customButton2({
   TextStyle? style,
   double? iconSize,
   Color? iconColor,
+  Color? iconBackground
 }) {
   final bool loading = isLoading == true;
   final Color background = color ?? mainColor;
@@ -136,9 +137,10 @@ Widget customButton2({
                       if (icon != null) ...[
                         Container(
                           padding: EdgeInsets.all(6.r),
+                          margin: EdgeInsets.symmetric(vertical: 4.h),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.white.withValues(alpha:0.2),
+                            color: iconBackground??Colors.white.withValues(alpha:0.2),
                           ),
                           child: Icon(
                             icon,

@@ -9,7 +9,9 @@ import 'package:renth_manager/model/response/quickech_get_room_data.dart';
 import 'package:renth_manager/widgets/web_image.dart';
 
 class RoomDetailsController extends GetxController {
-  var isLoading = false.obs;
+  // isLoading = details fetch, isUpdating = save korar shomoy
+  var isLoading = true.obs;
+  var isUpdating = false.obs;
   var roomDetails = QuicktechRoomDetails().obs;
   var errorMessage = ''.obs;
 
@@ -49,10 +51,12 @@ class RoomDetailsController extends GetxController {
   final ImagePicker _picker = ImagePicker();
   final CommonController commonController = locator.get<CommonController>();
 
+  late final Future<void> _createDataFuture;
+
   @override
   void onInit() {
     super.onInit();
-    _loadCreateData();
+    _createDataFuture = _loadCreateData();
   }
 
   Future<void> _loadCreateData() async {
@@ -67,24 +71,19 @@ class RoomDetailsController extends GetxController {
     }
   }
 
-  // --- MEDIA PICKING METHODS WITH SOURCE ---
-
-  // ইমেজ পিক করার মেথড
+  // --- MEDIA PICKING ---
   Future<void> pickImages(ImageSource source) async {
     try {
       if (source == ImageSource.camera) {
-        // ক্যামেরা দিয়ে একবারে একটি ছবিই তোলা যায়
         final XFile? image = await _picker.pickImage(
           source: ImageSource.camera,
         );
         if (image != null) {
-          selectedImages.add(File(image.path)); // এক্সিস্টিং লিস্টে যোগ হবে
+          selectedImages.add(File(image.path));
         }
       } else {
-        // গ্যালারি থেকে একসাথে একাধিক ছবি সিলেক্ট করা যাবে
         final List<XFile> images = await _picker.pickMultiImage();
         if (images.isNotEmpty) {
-          // আগের ছবিগুলো রেখে নতুনগুলো যোগ করতে চাইলে .addAll ব্যবহার করতে পারেন
           selectedImages.addAll(images.map((img) => File(img.path)).toList());
         }
       }
@@ -93,14 +92,11 @@ class RoomDetailsController extends GetxController {
     }
   }
 
-  // ভিডিও পিক করার মেথড
   Future<void> pickVideo(ImageSource source) async {
     try {
       final XFile? video = await _picker.pickVideo(
         source: source,
-        maxDuration: const Duration(
-          minutes: 5,
-        ), // অপশনাল: ম্যাক্সিমাম ডিউরেশন সেট করতে পারেন
+        maxDuration: const Duration(minutes: 5),
       );
       if (video != null) {
         selectedVideo.value = File(video.path);
@@ -110,8 +106,7 @@ class RoomDetailsController extends GetxController {
     }
   }
 
-  // --- MEDIA REMOVAL & HELPER METHODS ---
-
+  // --- MEDIA REMOVAL & HELPERS ---
   final Map<String, Uint8List> _existingImageBytesCache = {};
 
   void _preFetchExistingImages() {
@@ -123,7 +118,7 @@ class RoomDetailsController extends GetxController {
         _downloadImageBytes(resolvedUrl).then((bytes) {
           if (bytes != null) {
             debugPrint(
-              "✓ Pre-fetched existing image in background: $resolvedUrl (${bytes.length} bytes)",
+              "✓ Pre-fetched existing image: $resolvedUrl (${bytes.length} bytes)",
             );
           }
         });
@@ -163,12 +158,10 @@ class RoomDetailsController extends GetxController {
   }
 
   Future<Uint8List?> _downloadImageBytes(String url) async {
-    // 1. Check in-memory cache first
     if (_existingImageBytesCache.containsKey(url)) {
       return _existingImageBytesCache[url];
     }
 
-    // 2. Try direct download (works natively on Mobile/Desktop, and same-origin Web)
     try {
       final response = await http
           .get(Uri.parse(url))
@@ -184,7 +177,6 @@ class RoomDetailsController extends GetxController {
       debugPrint("Direct download failed for $url (likely CORS on web): $e");
     }
 
-    // 3. Fallback for Web CORS: fetch via CORS-enabled public proxies
     if (kIsWeb) {
       final proxies = [
         'https://wsrv.nl/?url=${Uri.encodeComponent(url)}',
@@ -193,14 +185,10 @@ class RoomDetailsController extends GetxController {
 
       for (var proxyUrl in proxies) {
         try {
-          debugPrint("Attempting CORS-friendly fetch via proxy: $proxyUrl");
           final response = await http
               .get(Uri.parse(proxyUrl))
               .timeout(const Duration(seconds: 15));
           if (response.statusCode == 200) {
-            debugPrint(
-              "✓ Successfully downloaded image via proxy (${response.bodyBytes.length} bytes)",
-            );
             _existingImageBytesCache[url] = response.bodyBytes;
             return response.bodyBytes;
           }
@@ -213,22 +201,35 @@ class RoomDetailsController extends GetxController {
     return null;
   }
 
-  int parsePrice(String value) {
-    return int.tryParse(value.replaceAll(',', '').trim()) ?? 0;
+  // "1000.00" -> "1000", "12.5" -> "12.5"
+  String parsePrice(String value) {
+    final d = double.tryParse(value.replaceAll(',', '').trim()) ?? 0;
+    return d == d.truncateToDouble() ? d.toInt().toString() : d.toString();
   }
 
-  // --- API UPDATE METHOD ---
+  // API theke asha "1000.00" field e dekhanor jonno
+  String _fmt(String? value) {
+    if (value == null || value.trim().isEmpty) return '';
+    final d = double.tryParse(value);
+    if (d == null) return value;
+    return d == d.truncateToDouble() ? d.toInt().toString() : d.toString();
+  }
+
+  // --- API UPDATE ---
   Future<void> updateRoomDetails(int roomId) async {
     final category = selectedProperty.value?.propertyCategory?.name ?? "Hotel";
+    final isHotel = category == 'Hotel';
+    final showChildren =
+        category != 'Bachelor' &&
+        category != 'Rider' &&
+        category != 'Flat Sale/Buy';
 
-    // Validation: Minimum 1 image requirement
     final totalImages = existingImages.length + selectedImages.length;
     if (totalImages < 1) {
       showErrorToast("At least one image is required");
       return;
     }
 
-    // Validation
     if (selectedProperty.value == null) {
       showErrorToast("Please select Property");
       return;
@@ -284,7 +285,7 @@ class RoomDetailsController extends GetxController {
       return;
     }
 
-    if (category == 'Hotel' && capacityChildrenController.text.trim().isEmpty) {
+    if (isHotel && capacityChildrenController.text.trim().isEmpty) {
       showErrorToast("Enter child capacity");
       return;
     }
@@ -318,20 +319,18 @@ class RoomDetailsController extends GetxController {
     }
 
     try {
-      isLoading(true);
+      isUpdating(true);
 
       var url = Uri.parse(Api.roomUpdate);
       var token = GetStorage().read(StorageKeys.accessToken);
 
       var request = http.MultipartRequest('POST', url);
 
-      // Headers
       request.headers.addAll({
         'Authorization': "Bearer $token",
         'Accept': 'application/json',
       });
 
-      // Fields Data
       request.fields.addAll({
         'property_room_id': roomId.toString(),
         'property_id': selectedProperty.value!.id.toString(),
@@ -341,43 +340,41 @@ class RoomDetailsController extends GetxController {
                 ? '0'
                 : selectedBedType.value?.id.toString() ?? '0',
         'room_name': roomNameController.text.trim(),
-        'room_price_per_night':
-            parsePrice(roomPriceController.text.trim()).toString(),
+        'room_price_per_night': parsePrice(roomPriceController.text),
         'capacity_of_adults':
             category == 'Rider' ? '0' : capacityAdultsController.text.trim(),
         'capacity_of_children':
-            category == 'Hotel' ? capacityChildrenController.text.trim() : '0',
+            showChildren && capacityChildrenController.text.trim().isNotEmpty
+                ? capacityChildrenController.text.trim()
+                : '0',
         'room_size': roomSizeController.text.trim(),
         'room_description': roomDescriptionController.text.trim(),
         'number_of_room': numberOfRoomController.text.trim(),
         'extra_price_per_adult':
-            category == 'Hotel'
-                ? parsePrice(extraPriceAdultController.text.trim()).toString()
-                : '0',
+            isHotel ? parsePrice(extraPriceAdultController.text) : '0',
         'extra_price_per_child_bed':
-            category == 'Hotel'
-                ? parsePrice(extraPriceChildController.text.trim()).toString()
-                : '0',
-        'discount_price_per_night':
-            parsePrice(discountPriceController.text.trim()).toString(),
+            isHotel ? parsePrice(extraPriceChildController.text) : '0',
+        'discount_price_per_night': parsePrice(discountPriceController.text),
         'extra_mattress_price_per_night':
-            category == 'Hotel'
-                ? parsePrice(
-                  extraMattressPriceController.text.trim(),
-                ).toString()
-                : '0',
-        'vat_percentage': vatPercentageController.text.trim(),
-        'service_charge': serviceChargeController.text.trim(),
+            isHotel ? parsePrice(extraMattressPriceController.text) : '0',
+        'vat_percentage':
+            vatPercentageController.text.trim().isEmpty
+                ? '0'
+                : vatPercentageController.text.trim(),
+        'service_charge':
+            serviceChargeController.text.trim().isEmpty
+                ? '0'
+                : serviceChargeController.text.trim(),
       });
 
-      // Facility IDs Mapping as Multiple Key-Value Pairs (Hotel only)
-      if (category == 'Hotel') {
+      // Facilities (Hotel only)
+      if (isHotel) {
         for (var i = 0; i < selectedFacilityIds.length; i++) {
           request.fields['facilityIds[$i]'] = selectedFacilityIds[i].toString();
         }
       }
 
-      // Add Video File (If picked)
+      // Video (notun pick korle)
       if (selectedVideo.value != null) {
         if (kIsWeb) {
           final xfile = XFile(selectedVideo.value!.path);
@@ -397,12 +394,9 @@ class RoomDetailsController extends GetxController {
             ),
           );
         }
-        debugPrint("✓ Video attached to request");
       }
 
-      // Add Multiple Images
-      // Backend replaces all images if multi_img[] is present.
-      // If image set changed (any existing removed or any new added), send all remaining + new images.
+      // Images: kichu change hole kept + new duto-i pathano
       final initialImages = roomDetails.value.propertyRoom?.roomImages ?? [];
       final bool hasExistingRemoved =
           existingImages.length != initialImages.length ||
@@ -413,15 +407,10 @@ class RoomDetailsController extends GetxController {
                   (init.photoName != null && init.photoName == e.photoName),
             ),
           );
-      final bool hasNewImages = selectedImages.isNotEmpty;
-      final bool imageSetChanged = hasExistingRemoved || hasNewImages;
+      final bool imageSetChanged =
+          hasExistingRemoved || selectedImages.isNotEmpty;
 
       if (imageSetChanged) {
-        debugPrint(
-          "Images changed. Preparing ${existingImages.length} existing and ${selectedImages.length} new images...",
-        );
-
-        // 1. Download existing images in parallel
         if (existingImages.isNotEmpty) {
           final List<Uint8List?> downloadedBytes = await Future.wait(
             existingImages.map((img) async {
@@ -438,7 +427,6 @@ class RoomDetailsController extends GetxController {
               showErrorToast(
                 "Failed to process existing images. Please try again.",
               );
-              isLoading(false);
               return;
             }
             final rawUrl = existingImages[i].photoName ?? '';
@@ -456,7 +444,6 @@ class RoomDetailsController extends GetxController {
           }
         }
 
-        // 2. Add newly selected images
         for (var i = 0; i < selectedImages.length; i++) {
           if (kIsWeb) {
             final xfile = XFile(selectedImages[i].path);
@@ -478,36 +465,31 @@ class RoomDetailsController extends GetxController {
             );
           }
         }
-        debugPrint(
-          "✓ Total ${request.files.where((f) => f.field == 'multi_img[]').length} images attached to request",
-        );
-      } else {
-        debugPrint(
-          "No image changes detected. Keeping existing images untouched in database.",
-        );
       }
-
-      // Send Request
-      debugPrint("Sending update request...");
-      http.StreamedResponse response = await request.send().timeout(
-        const Duration(seconds: 30),
+      debugPrint(
+        "Images changed: $imageSetChanged, kept ${existingImages.length}, new ${selectedImages.length}",
       );
 
+      debugPrint("Sending update request... fields: ${request.fields}");
+      http.StreamedResponse response = await request.send().timeout(
+        const Duration(seconds: 180),
+      );
+
+      final responseBody = await response.stream.bytesToString();
+
       if (response.statusCode == 200) {
-        String responseBody = await response.stream.bytesToString();
         debugPrint("Update Success Response: $responseBody");
         showSuccessToast("Room updated successfully");
-        Get.back(result: true); // রিলোড সিগন্যালসহ ব্যাক করবে
+        Get.back(result: true);
       } else {
-        String errorBody = await response.stream.bytesToString();
         debugPrint(
-          "Failed to update: Status ${response.statusCode}, Body: $errorBody",
+          "Failed to update: Status ${response.statusCode}, Body: $responseBody",
         );
 
         String errorMsg =
             "Failed to update room. Status: ${response.statusCode}";
         try {
-          final decoded = jsonDecode(errorBody);
+          final decoded = jsonDecode(responseBody);
           errorMsg = decoded['message'] ?? decoded['error'] ?? errorMsg;
         } catch (_) {}
 
@@ -517,7 +499,7 @@ class RoomDetailsController extends GetxController {
       debugPrint("Exception inside updateRoomDetails: $e");
       showErrorToast("Error: ${e.toString()}");
     } finally {
-      isLoading(false);
+      isUpdating(false);
     }
   }
 
@@ -526,7 +508,8 @@ class RoomDetailsController extends GetxController {
       isLoading(true);
       errorMessage('');
 
-      // Ensure dropdown data is loaded first
+      // dropdown data load shesh howa porjonto opekkha
+      await _createDataFuture;
       if (properties.isEmpty) {
         await _loadCreateData();
       }
@@ -534,6 +517,7 @@ class RoomDetailsController extends GetxController {
       final url = Api.roomDetails(roomId);
       final token = GetStorage().read(StorageKeys.accessToken);
       debugPrint(url);
+
       final response = await http
           .get(
             Uri.parse(url),
@@ -548,10 +532,13 @@ class RoomDetailsController extends GetxController {
         final data = jsonDecode(response.body);
         roomDetails.value = QuicktechRoomDetails.fromJson(data);
 
-        // Populate all controllers and select dropdowns
-        await Future.delayed(const Duration(milliseconds: 100));
-        _populateControllers();
+        if (roomDetails.value.propertyRoom == null) {
+          errorMessage.value = "Room not found (ID: $roomId)";
+          showErrorToast("Room not found");
+          return;
+        }
 
+        _populateControllers();
         debugPrint("✓ Room details fetched and populated successfully");
       } else {
         errorMessage.value = "Error: ${response.statusCode}";
@@ -568,80 +555,98 @@ class RoomDetailsController extends GetxController {
     }
   }
 
+Future<void> deleteRoom({required int propertyRoomId}) async {
+  try {
+    isLoading.value = true;
+
+    var request = http.MultipartRequest('POST', Uri.parse(Api.roomDelete));
+    request.headers.addAll({
+      'Authorization': 'Bearer ${GetStorage().read(StorageKeys.accessToken)}',
+      'Accept': 'application/json',
+    });
+    request.fields.addAll({'property_room_id': propertyRoomId.toString()});
+
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(responseBody);
+      debugPrint('Delete room response: $data');
+
+      
+      final roomController = locator.get<QuickTechRoomController>();
+      final dashboardController = locator.get<DashboardController>();
+
+      final rawPropertyId = GetStorage().read(StorageKeys.selectedPropertyId);
+      final propertyId = int.tryParse(rawPropertyId?.toString() ?? '');
+
+    
+      await Future.wait([
+        dashboardController.getManagerDashboard(),
+        if (propertyId != null)
+          roomController.fetchRoomRecords(propertyId: propertyId),
+      ]);
+
+      Get.back();
+      showSuccessToast('Room deleted successfully');
+    } else {
+      debugPrint('Delete room failed: $responseBody');
+      showErrorToast('Failed to delete room. Please try again.');
+    }
+  } catch (e) {
+    debugPrint('Delete room error: $e');
+    showErrorToast('Something went wrong. Please try again.');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
   void _populateControllers() {
     final room = roomDetails.value.propertyRoom;
-    if (room != null) {
-      // TextFields
-      roomNameController.text = room.roomName ?? '';
-      roomPriceController.text = room.roomPricePerNight ?? '';
-      capacityAdultsController.text = room.capacityOfAdults?.toString() ?? '';
-      capacityChildrenController.text =
-          room.capacityOfChildren?.toString() ?? '';
-      roomSizeController.text = room.roomSize ?? '';
-      roomDescriptionController.text = room.roomDescription ?? '';
-      numberOfRoomController.text = room.numberOfRoom?.toString() ?? '';
-      extraPriceAdultController.text = room.extraPricePerAdult ?? '';
-      extraPriceChildController.text = room.extraPricePerChildBed ?? '';
-      discountPriceController.text = room.discountPricePerNight ?? '';
-      extraMattressPriceController.text = room.extraMattressPricePerNight ?? '';
-      vatPercentageController.text = room.vatPercentage?.toString() ?? '';
-      serviceChargeController.text = room.serviceCharge ?? '';
+    if (room == null) return;
 
-      // Dropdowns - Find matching items and set them
-      if (room.propertyId != null) {
-        final matchedProperty = properties.firstWhereOrNull(
-          (p) => p.id == room.propertyId,
-        );
-        if (matchedProperty != null) {
-          selectedProperty.value = matchedProperty;
-          debugPrint("✓ Property selected: ${matchedProperty.title}");
-        }
-      }
+    roomNameController.text = room.roomName ?? '';
+    roomPriceController.text = _fmt(room.roomPricePerNight);
+    capacityAdultsController.text = room.capacityOfAdults?.toString() ?? '';
+    capacityChildrenController.text = room.capacityOfChildren?.toString() ?? '';
+    roomSizeController.text = room.roomSize ?? '';
+    roomDescriptionController.text = room.roomDescription ?? '';
+    numberOfRoomController.text = room.numberOfRoom?.toString() ?? '';
+    extraPriceAdultController.text = _fmt(room.extraPricePerAdult);
+    extraPriceChildController.text = _fmt(room.extraPricePerChildBed);
+    discountPriceController.text = _fmt(room.discountPricePerNight);
+    extraMattressPriceController.text = _fmt(room.extraMattressPricePerNight);
+    vatPercentageController.text = room.vatPercentage?.toString() ?? '';
+    serviceChargeController.text = _fmt(room.serviceCharge);
 
-      if (room.roomTypeId != null) {
-        final matchedRoomType = roomTypes.firstWhereOrNull(
-          (rt) => rt.id == room.roomTypeId,
-        );
-        if (matchedRoomType != null) {
-          selectedRoomType.value = matchedRoomType;
-          debugPrint("✓ Room Type selected: ${matchedRoomType.name}");
-        }
-      }
+    selectedProperty.value = properties.firstWhereOrNull(
+      (p) => p.id == room.propertyId,
+    );
+    selectedRoomType.value = roomTypes.firstWhereOrNull(
+      (rt) => rt.id == room.roomTypeId,
+    );
+    selectedBedType.value = bedTypes.firstWhereOrNull(
+      (bt) => bt.id == room.bedTypeId,
+    );
 
-      if (room.bedTypeId != null) {
-        final matchedBedType = bedTypes.firstWhereOrNull(
-          (bt) => bt.id == room.bedTypeId,
-        );
-        if (matchedBedType != null) {
-          selectedBedType.value = matchedBedType;
-          debugPrint("✓ Bed Type selected: ${matchedBedType.name}");
-        }
-      }
+    selectedFacilityIds.value =
+        (room.facilities ?? [])
+            .map((f) => f.id ?? 0)
+            .where((id) => id != 0)
+            .toList();
 
-      // Facilities
-      if (room.facilities != null && room.facilities!.isNotEmpty) {
-        selectedFacilityIds.value =
-            room.facilities!
-                .map((f) => f.id ?? 0)
-                .where((id) => id != 0)
-                .toList();
-        debugPrint("✓ Facilities selected: ${selectedFacilityIds.length}");
-      }
+    existingImages.assignAll(room.roomImages ?? []);
+    _existingImageBytesCache.clear();
+    _preFetchExistingImages();
 
-      // Existing Images & Video
-      existingImages.assignAll(room.roomImages ?? []);
-      _existingImageBytesCache.clear();
-      _preFetchExistingImages();
+    final videoStr = room.video?.toString().trim();
+    existingVideo.value =
+        (videoStr != null && videoStr.isNotEmpty && videoStr != 'null')
+            ? videoStr
+            : null;
 
-      final videoStr = room.video?.toString().trim();
-      if (videoStr != null && videoStr.isNotEmpty && videoStr != 'null') {
-        existingVideo.value = videoStr;
-      } else {
-        existingVideo.value = null;
-      }
-      selectedImages.clear();
-      selectedVideo.value = null;
-    }
+    selectedImages.clear();
+    selectedVideo.value = null;
   }
 
   void toggleFacility(int id) {

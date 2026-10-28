@@ -73,15 +73,11 @@ class _QuickTechRoomManagementTableState
                     ],
                     rows:
                         rooms.map((room) {
-                          final int? roomId = room.id;
-                          final int roomTypeId =
-                              room.roomTypeId ?? room.roomType?.id ?? 0;
-                          final int propId =
-                              room.propertyId ?? _effectivePropertyId;
-                          final String roomName =
-                              room.propertyRoom?.roomName ??
-                              room.roomType?.name ??
-                              'this room';
+                   final int? roomId = room.propertyRoom?.id ?? room.id;
+final int roomTypeId = room.roomTypeId ?? room.roomType?.id ?? 0;
+final int propId = room.propertyId ?? _effectivePropertyId;
+final String roomName =
+    room.propertyRoom?.roomName ?? room.roomType?.name ?? 'this room';
 
                           return DataRow(
                             cells: [
@@ -224,30 +220,29 @@ class _QuickTechRoomManagementTableState
     );
   }
 
-  Widget _detailsButton(int roomId) {
-    debugPrint("ROom ID :$roomId");
-    return OutlinedButton.icon(
-      onPressed:
-          roomId > 0
-              ? () {
-                Get.toNamed(AppRoutes.roomDetails, arguments: roomId);
-              }
-              : null,
-      icon: const Icon(Icons.visibility_outlined, size: 16),
-      label: Text(
-        'Details',
-        style: QuickTechAppTextStyle.bodyText4().copyWith(
-          fontWeight: FontWeight.bold,
-        ),
+Widget _detailsButton(int roomId) {
+  return OutlinedButton.icon(
+    onPressed:
+        roomId > 0
+            ? () {
+              Get.toNamed(AppRoutes.roomDetails, arguments: roomId);
+            }
+            : null,
+    icon: const Icon(Icons.visibility_outlined, size: 16),
+    label: Text(
+      'Details',
+      style: QuickTechAppTextStyle.bodyText4().copyWith(
+        fontWeight: FontWeight.bold,
       ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.black87,
-        side: BorderSide(color: mainColor, width: 1.4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-      ),
-    );
-  }
+    ),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.black87,
+      side: BorderSide(color: mainColor, width: 1.4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+    ),
+  );
+}
 
   Color getStatusColor(String? status) {
     switch (status?.toLowerCase()) {
