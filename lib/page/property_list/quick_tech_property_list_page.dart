@@ -22,7 +22,6 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
   Future<void> _onAddProperty() async {
     await commonController.fetchPropertyCategories();
     Get.toNamed(AppRoutes.addNewProperty);
-    //Get.to(() => const QuickTechAddNewPropertyScreen());
   }
 
   void _onAddRoom() {
@@ -30,7 +29,6 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
         editPropertyController.propertyList.value.properties ?? [];
     if (properties.isNotEmpty) {
       Get.toNamed(AppRoutes.addRoom);
-      // Get.to(() => const QuickTechAddRoomScreen());
     } else {
       Get.snackbar(
         'Action Required',
@@ -53,7 +51,7 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // BODY (mobile < 600 = new UI, tablet/desktop = original UI)
+  // BODY (mobile < 600, tablet 600-1023, desktop >= 1024)
   // ---------------------------------------------------------------------------
 
   Widget _buildBody(BuildContext context) {
@@ -62,13 +60,144 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
         if (constraints.maxWidth < 600) {
           return _buildMobileBody();
         }
-        return _buildTabletDesktopBody();
+        return _buildTabletDesktopBody(isDesktop: constraints.maxWidth >= 1024);
       },
     );
   }
 
   // ===========================================================================
-  // MOBILE (new UI)
+  // ONBOARDING GUIDE (premium on tablet/desktop, compact on mobile)
+  // ===========================================================================
+
+  Widget _buildOnboardingGuide({bool premium = false}) {
+    const steps = [
+      (
+        Icons.apartment_rounded,
+        'Add Property',
+        'Register your hotel, apartment or guest house.',
+      ),
+      (
+        Icons.bed_rounded,
+        'Add Rooms',
+        'Add rentable rooms or flats under your property.',
+      ),
+      (
+        Icons.payments_outlined,
+        'Get Bookings',
+        'Receive bookings and manage your earnings.',
+      ),
+    ];
+
+    final double circle = premium ? 52 : 40.w;
+    final double iconSize = premium ? 26 : 20.sp;
+
+    return Container(
+      width: double.infinity,
+      padding: premium ? const EdgeInsets.all(28) : EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [mainColor.withValues(alpha: 0.25), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: mainColor.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Get started in 3 easy steps',
+            style: QuickTechAppTextStyle.headline4().copyWith(
+              fontSize: premium ? 20 : 16.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (premium) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Follow these steps to start earning with Renth Partner.',
+              style: QuickTechAppTextStyle.subtitle().copyWith(
+                fontSize: 13,
+                color: textMuted,
+              ),
+            ),
+          ],
+          SizedBox(height: premium ? 28 : 16.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < steps.length; i++) ...[
+                SizedBox(
+                  width: premium ? 170 : null,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: circle,
+                        height: circle,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i == 0 ? mainColor : white,
+                          border:
+                              premium
+                                  ? Border.all(
+                                    color: i == 0
+                                        ? mainColorDark
+                                        : Colors.grey.shade300,
+                                  )
+                                  : null,
+                        ),
+                        child: Icon(
+                          steps[i].$1,
+                          size: iconSize,
+                          color: i == 0 ? Colors.black : Colors.grey[600],
+                        ),
+                      ),
+                      SizedBox(height: premium ? 10 : 6.h),
+                      Text(
+                        '${i + 1}. ${steps[i].$2}',
+                        textAlign: TextAlign.center,
+                        style: QuickTechAppTextStyle.bodyText4().copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: premium ? 15 : null,
+                          color: i == 0 ? Colors.black87 : Colors.grey[600],
+                        ),
+                      ),
+                      if (premium) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          steps[i].$3,
+                          textAlign: TextAlign.center,
+                          style: QuickTechAppTextStyle.subtitle().copyWith(
+                            fontSize: 12,
+                            color: textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (i < steps.length - 1)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      margin: EdgeInsets.only(
+                        top: premium ? 25 : 19.w,
+                        left: 4,
+                        right: 4,
+                      ),
+                      color: Colors.grey[300],
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // MOBILE
   // ===========================================================================
 
   Widget _buildMobileBody() {
@@ -109,6 +238,10 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
             icon: CupertinoIcons.car_detailed,
             onTap: _onAddVehicle,
           ),
+
+          20.verticalSpace,
+
+          _buildOnboardingGuide(),
 
           40.verticalSpace,
         ],
@@ -161,15 +294,15 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
   }
 
   // ===========================================================================
-  // TABLET / DESKTOP (original UI)
+  // TABLET / DESKTOP
   // ===========================================================================
 
-  Widget _buildTabletDesktopBody() {
+  Widget _buildTabletDesktopBody({required bool isDesktop}) {
     return SingleChildScrollView(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
+          constraints: BoxConstraints(maxWidth: isDesktop ? 960 : 800),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -191,7 +324,6 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
               ),
               28.verticalSpace,
 
-              // Action Cards Grid
               _buildFeatureCard(
                 title: 'Add New Property',
                 description:
@@ -223,6 +355,10 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
                 isComingSoon: false,
                 onTap: _onAddVehicle,
               ),
+
+              28.verticalSpace,
+
+              _buildOnboardingGuide(premium: true),
 
               40.verticalSpace,
             ],
@@ -269,12 +405,7 @@ class _QuickTechPropertyListPageState extends State<QuickTechPropertyListPage> {
                     color: white.withValues(alpha: 0.75),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 28,
-                    color:
-                        black,
-                  ),
+                  child: Icon(icon, size: 28, color: black),
                 ),
                 const SizedBox(width: 18),
                 Expanded(

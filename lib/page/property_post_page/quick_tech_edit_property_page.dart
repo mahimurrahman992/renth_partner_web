@@ -1,493 +1,1328 @@
 import 'package:renth_manager/consts/consts.dart';
+import 'package:renth_manager/controller/quick_tech_property_details_controller.dart';
 
+// =============================================================================
+// PAGE (init + responsive switch)
+// =============================================================================
 
 class QuickTechEditPropertyPage extends StatefulWidget {
-  const QuickTechEditPropertyPage({super.key});
+  final int? propertyId;
+
+  const QuickTechEditPropertyPage({super.key, this.propertyId});
 
   @override
-  State<QuickTechEditPropertyPage> createState() => _QuickTechEditPropertyPageState();
+  State<QuickTechEditPropertyPage> createState() =>
+      _QuickTechEditPropertyPageState();
 }
 
 class _QuickTechEditPropertyPageState extends State<QuickTechEditPropertyPage> {
-  final EditPropertyController editPropertyController=Get.find();
-  final CommonController commonController = Get.find();
+  late final PropertyDetailsController controller;
+
+  int? get _resolvedId =>
+      widget.propertyId ??
+      controller.property?.id ??
+      int.tryParse(
+        (GetStorage().read(StorageKeys.selectedPropertyId) ?? '').toString(),
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    controller = Get.isRegistered<PropertyDetailsController>()
+        ? Get.find<PropertyDetailsController>()
+        : Get.put(PropertyDetailsController());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final id = _resolvedId;
+      if (id != null) controller.initializeEditForm(propertyId: id);
+    });
+  }
+
+  Future<void> _onSubmit() async {
+    final ok = await controller.updateProperty();
+    if (ok && mounted) {
+      Navigator.of(context).pop(true);
+    }
+  }
+
+  void _onCancel() => Get.back();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: customAppbarCommon(context, "Edit Property"),
-      body: Obx(
-            () => ListView(
-          padding: EdgeInsets.symmetric(horizontal: dynamicSize),
-          children: [
-            customTextField(
-              hint: "Title*",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.title,
-            ),
-            10.heightBox,
-            customTextField(
-              hint: "About*",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.about,
-            ),
-            10.heightBox,
-            "Available Rooms*".text.semiBold.xl.make(),
-            5.heightBox,
+      backgroundColor: backgroundColor,
+      body: Obx(() {
+        if (controller.isLoading.value || controller.isEditInitializing.value) {
+          return const Center(child: CircularProgressIndicator(color: mainColor));
+        }
 
-            ///
-            HStack([
-              Checkbox(
-                value: editPropertyController.isSingle.value,
-                onChanged: (v) {
-                  editPropertyController.isSingle.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Single Sharing".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isSingle.value)
-              VStack([
-                customTextField(
-                    hint: "Single Sharing Price",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.singleSharingPrice,
-                    keyboard: TextInputType.number
-                ),
-                5.heightBox,
-                customTextField(
-                    hint: "Number of Tenants",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.singleNumber,
-                    keyboard: TextInputType.number
-                ),
-              ]),
-
-            ///
-            HStack([
-              Checkbox(
-                value: editPropertyController.isDouble.value,
-                onChanged: (v) {
-                  editPropertyController.isDouble.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Double Sharing".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isDouble.value)
-              VStack([
-                customTextField(
-                    hint: "Double Sharing Price",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.doubleSharingPrice,
-                    keyboard: TextInputType.number
-                ),
-                5.heightBox,
-                customTextField(
-                    hint: "Number of Tenants",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.doubleNumber,
-                    keyboard: TextInputType.number
-                ),
-              ]),
-
-            ///
-            HStack([
-              Checkbox(
-                value: editPropertyController.isTriple.value,
-                onChanged: (v) {
-                  editPropertyController.isTriple.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Triple Sharing".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isTriple.value)
-              VStack([
-                customTextField(
-                    hint: "Triple Sharing Price",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.tripleSharingPrice,
-                    keyboard: TextInputType.number
-                ),
-                5.heightBox,
-                customTextField(
-                    hint: "Number of Tenants",
-                    isSuffix: false,
-                    isVisible: true,
-                    controller: editPropertyController.tripleNumber,
-                    keyboard: TextInputType.number
-                ),
-                10.heightBox,
-              ]),
-
-            ///
-            "Property Amenities*".text.semiBold.xl.make(),
-            5.heightBox,
-            HStack([
-              Checkbox(
-                value: editPropertyController.isCommon.value,
-                onChanged: (v) {
-                  editPropertyController.isCommon.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Common".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isCommon.value)
-              customTextField(
-                hint: "Common Amenities separate by coma(,)",
-                isSuffix: false,
-                isVisible: true,
-                maxline: 3,
-                controller: editPropertyController.common,
-              ),
-
-            ///
-            HStack([
-              Checkbox(
-                value: editPropertyController.isRoom.value,
-                onChanged: (v) {
-                  editPropertyController.isRoom.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Room".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isRoom.value)
-              customTextField(
-                hint: "Room Amenities separate by coma(,)",
-                isSuffix: false,
-                isVisible: true,
-                maxline: 3,
-                controller: editPropertyController.room,
-              ),
-
-            ///
-            HStack([
-              Checkbox(
-                value: editPropertyController.isService.value,
-                onChanged: (v) {
-                  editPropertyController.isService.value = v!;
-                },
-              ),
-              5.widthBox,
-              "Service".text.semiBold.sm.make(),
-            ]),
-            if (editPropertyController.isService.value)
-              customTextField(
-                hint: "Service Amenities separate by coma(,)",
-                isSuffix: false,
-                isVisible: true,
-                maxline: 3,
-                controller: editPropertyController.service,
-              ),
-            if (editPropertyController.isService.value) 10.heightBox,
-
-            ///
-            "Rent Package*".text.semiBold.xl.make(),
-            8.heightBox,
-
-            multiplePackageFieldsEdit(),
-
-            10.heightBox,
-            "Rent Terms*".text.semiBold.xl.make(),
-            8.heightBox,
-
-            multipleTermsFieldsEdit(),
-            10.heightBox,
-            "Property Rules*".text.semiBold.xl.make(),
-            8.heightBox,
-            customTextField(
-              hint: "Property Rules separate by coma(,)",
-              isSuffix: false,
-              isVisible: true,
-              maxline: 3,
-              controller: editPropertyController.rules,
-            ),
-            10.heightBox,
-            Obx(() {
-              var divisions = commonController.division.value.divisions;
-
-              return DropdownButtonFormField<Divisions>(
-                decoration: InputDecoration(
-                  labelText: 'Select Division',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-                value: editPropertyController.selectedDivision.value,
-                items:
-                divisions?.map((Divisions division) {
-                  return DropdownMenuItem<Divisions>(
-                    value: division,
-                    child: Text(division.name ?? "Unknown"),
-                  );
-                }).toList(),
-                onChanged: (Divisions? newValue) {
-                  if (newValue != null) {
-                    editPropertyController.setSelectedDivision(newValue);
-                    commonController.fetchDistricts(newValue.id);
-                  }
-                },
-              );
-            }),
-            10.heightBox,
-            Obx(() {
-              var divisions = commonController.district.value.districts;
-
-              return DropdownButtonFormField<Districts>(
-                decoration: InputDecoration(
-                  labelText: 'Select District',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-                value: editPropertyController.selectedDistrict.value,
-                items:
-                divisions?.map((Districts division) {
-                  return DropdownMenuItem<Districts>(
-                    value: division,
-                    child: Text(division.name ?? "Unknown"),
-                  );
-                }).toList(),
-                onChanged: (Districts? newValue) {
-                  if (newValue != null) {
-                    editPropertyController.setSelectedDistrict(newValue);
-                    commonController.fetchThana(newValue.id);
-                  }
-                },
-              );
-            }),
-            10.heightBox,
-            Obx(() {
-              var divisions = commonController.thana.value.upazilas;
-
-              return DropdownButtonFormField<Upazilas>(
-                decoration: InputDecoration(
-                  labelText: 'Select Upzela',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-                value: editPropertyController.selectedThana.value,
-                items:
-                divisions?.map((Upazilas thana) {
-                  return DropdownMenuItem<Upazilas>(
-                    value: thana,
-                    child: Text(thana.name ?? "Unknown"),
-                  );
-                }).toList(),
-                onChanged: (Upazilas? newValue) {
-                  if (newValue != null) {
-                    editPropertyController.setSelectedThanan(newValue);
-                  }
-                },
-              );
-            }),
-            10.heightBox,
-
-            customTextField(
-              hint: "Address",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.address,
-            ),
-            10.heightBox,
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Residents Gender*',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-              value:
-              editPropertyController.selectedGender.value.isEmpty
-                  ? null
-                  : editPropertyController.selectedGender.value,
-              items:
-              editPropertyController.genders.map((gender) {
-                return DropdownMenuItem<String>(
-                  value: gender,
-                  child: Text(gender),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  editPropertyController.setGender(value);
-                }
-              },
-            ),
-            10.heightBox,
-            DropdownButtonFormField<String>(
-              decoration: InputDecoration(
-                labelText: 'Residents Type*',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(13),
-                ),
-              ),
-              value:
-              editPropertyController.selectedType.value.isEmpty
-                  ? null
-                  : editPropertyController.selectedType.value,
-              items:
-              editPropertyController.type.map((type) {
-                return DropdownMenuItem<String>(
-                  value: type,
-                  child: Text(type),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  editPropertyController.setType(value);
-                }
-              },
-            ),
-            10.heightBox,
-            customTextField(
-              hint: "Total Price",
-              keyboard: TextInputType.number,
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.totalPrice,
-            ),
-            10.heightBox,
-            customTextField(
-              hint: "Google Map Embed Code",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.googleMap,
-            ),
-            10.heightBox,
-            customTextField(
-              hint: "Property Owner Name*",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.ownerName,
-            ),
-            10.heightBox,
-            customTextField(
-              hint: "About Property Owner",
-              isSuffix: false,
-              isVisible: true,
-              controller: editPropertyController.ownerAbout,
-            ),
-            10.heightBox,
-            "Add Image".text.semiBold.make(),
-            5.heightBox,
-            Row(
+        if (controller.property == null) {
+          return SafeArea(
+            child: Column(
               children: [
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: () => Get.back(),
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                    ),
+                  ),
+                ),
                 Expanded(
-                  child: Obx(() {
-                    if (editPropertyController.selectedImages.isNotEmpty) {
-                      // Show selected images from device
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: NeverScrollableScrollPhysics(),
-                        padding: EdgeInsets.all(8.0),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 8.0,
-                          mainAxisSpacing: 8.0,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline_rounded,
+                            size: 50, color: Colors.redAccent),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Property data not found',
+                          style: TextStyle(fontSize: 15, color: Colors.black87),
                         ),
-                        itemCount: editPropertyController.selectedImages.length,
-                        itemBuilder: (context, index) {
-                          return Stack(
-                            children: [
-                              Image.file(
-                                editPropertyController
-                                    .selectedImages[index],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                              ).box.alignCenter
-                                  .border(color: Colors.black, width: 1.5)
-                                  .rounded
-                                  .clip(Clip.antiAlias)
-                                  .make(),
-                              Positioned(
-                                top: -5,
-                                right: -5,
-                                child: IconButton(
-                                  icon: Icon(
-                                    Icons.remove_circle,
-                                    color: Colors.red,
-                                    size: 28,
-                                  ),
-                                  onPressed:
-                                      () => editPropertyController.removeImage(
-                                    index,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ).onTap(editPropertyController.pickMultipleImages);
-                    }
-                    // else if (controller.multipleImageGet.isNotEmpty) {
-                    //   // Show images from API
-                    //   return GridView.builder(
-                    //     shrinkWrap: true,
-                    //     physics: NeverScrollableScrollPhysics(),
-                    //     padding: EdgeInsets.all(8.0),
-                    //     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    //       crossAxisCount: 3,
-                    //       crossAxisSpacing: 8.0,
-                    //       mainAxisSpacing: 8.0,
-                    //     ),
-                    //     itemCount: controller.multipleImageGet.length,
-                    //     itemBuilder: (context, index) {
-                    //       return Image.network(
-                    //         "${HostApi.imageUrl}${controller.multipleImageGet[index].multiImage}",
-                    //         fit: BoxFit.cover,
-                    //         width: double.infinity,
-                    //         height: double.infinity,
-                    //       )
-                    //           .box
-                    //           .alignCenter
-                    //           .border(color: Colors.black, width: 1.5)
-                    //           .rounded
-                    //           .clip(Clip.antiAlias)
-                    //           .make();
-                    //     },
-                    //   ).onTap(controller.pickMultipleImages);
-                    // }
-                    else {
-                      // Show "No images selected"
-                      return GestureDetector(
-                        onTap: editPropertyController.pickMultipleImages,
-                        child:
-                        Text('No images selected').box
-                            .size(context.screenWidth, 50)
-                            .alignCenter
-                            .border(color: Colors.black, width: 1.5)
-                            .rounded
-                            .makeCentered(),
-                      );
-                    }
-                  }),
+                        const SizedBox(height: 18),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            final id = _resolvedId;
+                            if (id != null) {
+                              controller.initializeEditForm(propertyId: id);
+                            }
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: mainColor,
+                            foregroundColor: Colors.black,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            20.heightBox,
-            customButton(
-              title: "Post",
-              onPressed: () {
-                // editPropertyController.uploadProperty();
-              },
-              color: secondColor,
-              txtColor: white,
-            ).w(context.screenWidth),
-            10.heightBox,
-          ],
+          );
+        }
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth >= 1024) {
+              return QuickTechEditPropertyDesktopView(
+                controller: controller,
+                onSubmit: _onSubmit,
+                onCancel: _onCancel,
+              );
+            }
+            if (constraints.maxWidth >= 600) {
+              return QuickTechEditPropertyTabletView(
+                controller: controller,
+                onSubmit: _onSubmit,
+                onCancel: _onCancel,
+              );
+            }
+            return QuickTechEditPropertyMobileView(
+              controller: controller,
+              onSubmit: _onSubmit,
+              onCancel: _onCancel,
+            );
+          },
+        );
+      }),
+    );
+  }
+}
+
+// =============================================================================
+// MOBILE VIEW
+// =============================================================================
+
+class QuickTechEditPropertyMobileView extends StatelessWidget {
+  final PropertyDetailsController controller;
+  final VoidCallback onSubmit;
+  final VoidCallback onCancel;
+
+  const QuickTechEditPropertyMobileView({
+    super.key,
+    required this.controller,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardDeco = BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
         ),
+      ],
+    );
+
+    InputDecoration deco(String label, {String? prefix, bool multi = false}) =>
+        InputDecoration(
+          labelText: label,
+          prefixText: prefix,
+          alignLabelWithHint: multi,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        );
+
+    Widget sectionTitle(IconData icon, String text) => Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.black87),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        );
+
+    final countryField = Obx(
+      () => DropdownButtonFormField<Countries>(
+        value: controller.selectedCountry.value,
+        isExpanded: true,
+        decoration: deco('Country *'),
+        items: controller.countries
+            .map((c) => DropdownMenuItem<Countries>(
+                  value: c,
+                  child: Text(c.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onCountryChanged,
+      ),
+    );
+
+    final districtField = Obx(
+      () => DropdownButtonFormField<District>(
+        value: controller.selectedDistrict.value,
+        isExpanded: true,
+        decoration: deco('District *').copyWith(
+          suffixIcon: controller.isLoadingLocations.value
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : null,
+        ),
+        items: controller.districts
+            .map((d) => DropdownMenuItem<District>(
+                  value: d,
+                  child: Text(d.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onDistrictChanged,
+      ),
+    );
+
+    final photos = Obx(
+      () => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (int i = 0; i < controller.newImageBytes.length; i++)
+            SizedBox(
+              width: 90,
+              height: 90,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        controller.newImageBytes[i],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 3,
+                    right: 3,
+                    child: InkWell(
+                      onTap: () => controller.removeNewImage(i),
+                      child: const CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.black54,
+                        child: Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          InkWell(
+            onTap: controller.pickImages,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                color: mainColor.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_outlined,
+                      size: 26, color: Colors.black87),
+                  SizedBox(height: 4),
+                  Text('Add', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final actions = Obx(
+      () => Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: controller.isUpdating.value ? null : onCancel,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.black87)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: controller.isUpdating.value ? null : onSubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: mainColor,
+                foregroundColor: Colors.black,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: controller.isUpdating.value
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                  : const Text('Update Property',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // APP BAR
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: onCancel,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child:
+                        const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  ),
+                ),
+                const Expanded(
+                  child: Text(
+                    'Edit Property',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 34),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // BASIC INFO
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: cardDeco,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        sectionTitle(Icons.apartment_rounded, 'Basic Information'),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.titleController,
+                          decoration: deco('Title *'),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.startingPriceController,
+                          keyboardType: TextInputType.number,
+                          decoration:
+                              deco('Starting Price Per Night *', prefix: '৳ '),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // LOCATION
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: cardDeco,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        sectionTitle(Icons.location_on_outlined, 'Location'),
+                        const SizedBox(height: 14),
+                        countryField,
+                        const SizedBox(height: 14),
+                        districtField,
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.addressController,
+                          decoration: deco('Address *'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // DESCRIPTION
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: cardDeco,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        sectionTitle(Icons.description_outlined, 'Description'),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.overviewController,
+                          maxLines: 4,
+                          decoration: deco('Overview *', multi: true),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.nearByController,
+                          maxLines: 3,
+                          decoration: deco('Near By *', multi: true),
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: controller.additionalDetailsController,
+                          maxLines: 3,
+                          decoration: deco('Additional Details *', multi: true),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // PHOTOS
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: cardDeco,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        sectionTitle(Icons.photo_library_outlined, 'Photos *'),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Upload new photos. They will replace the current photos.',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 12),
+                        photos,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  actions,
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// TABLET VIEW
+// =============================================================================
+
+class QuickTechEditPropertyTabletView extends StatelessWidget {
+  final PropertyDetailsController controller;
+  final VoidCallback onSubmit;
+  final VoidCallback onCancel;
+
+  const QuickTechEditPropertyTabletView({
+    super.key,
+    required this.controller,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardDeco = BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+
+    InputDecoration deco(String label, {String? prefix, bool multi = false}) =>
+        InputDecoration(
+          labelText: label,
+          prefixText: prefix,
+          alignLabelWithHint: multi,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        );
+
+    Widget sectionTitle(IconData icon, String text) => Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.black87),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        );
+
+    final countryField = Obx(
+      () => DropdownButtonFormField<Countries>(
+        value: controller.selectedCountry.value,
+        isExpanded: true,
+        decoration: deco('Country *'),
+        items: controller.countries
+            .map((c) => DropdownMenuItem<Countries>(
+                  value: c,
+                  child: Text(c.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onCountryChanged,
+      ),
+    );
+
+    final districtField = Obx(
+      () => DropdownButtonFormField<District>(
+        value: controller.selectedDistrict.value,
+        isExpanded: true,
+        decoration: deco('District *').copyWith(
+          suffixIcon: controller.isLoadingLocations.value
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : null,
+        ),
+        items: controller.districts
+            .map((d) => DropdownMenuItem<District>(
+                  value: d,
+                  child: Text(d.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onDistrictChanged,
+      ),
+    );
+
+    final photos = Obx(
+      () => Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (int i = 0; i < controller.newImageBytes.length; i++)
+            SizedBox(
+              width: 100,
+              height: 100,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        controller.newImageBytes[i],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 3,
+                    right: 3,
+                    child: InkWell(
+                      onTap: () => controller.removeNewImage(i),
+                      child: const CircleAvatar(
+                        radius: 11,
+                        backgroundColor: Colors.black54,
+                        child: Icon(Icons.close, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          InkWell(
+            onTap: controller.pickImages,
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: mainColor.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade400),
+              ),
+              child: const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_outlined,
+                      size: 28, color: Colors.black87),
+                  SizedBox(height: 4),
+                  Text('Add', style: TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final actions = Obx(
+      () => Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          OutlinedButton(
+            onPressed: controller.isUpdating.value ? null : onCancel,
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child:
+                const Text('Cancel', style: TextStyle(color: Colors.black87)),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton(
+            onPressed: controller.isUpdating.value ? null : onSubmit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: mainColor,
+              foregroundColor: Colors.black,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: controller.isUpdating.value
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.black,
+                    ),
+                  )
+                : const Text('Update Property',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // TOP BAR
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+            child: Row(
+              children: [
+                InkWell(
+                  onTap: onCancel,
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child:
+                        const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Text(
+                    'Edit Property',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 900),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // BASIC INFO (2 col)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: cardDeco,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sectionTitle(
+                                Icons.apartment_rounded, 'Basic Information'),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: TextField(
+                                    controller: controller.titleController,
+                                    decoration: deco('Title *'),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  flex: 2,
+                                  child: TextField(
+                                    controller:
+                                        controller.startingPriceController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: deco('Starting Price / Night *',
+                                        prefix: '৳ '),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // LOCATION
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: cardDeco,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sectionTitle(
+                                Icons.location_on_outlined, 'Location'),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                Expanded(child: countryField),
+                                const SizedBox(width: 14),
+                                Expanded(child: districtField),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: controller.addressController,
+                              decoration: deco('Address *'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // DESCRIPTION
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: cardDeco,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sectionTitle(
+                                Icons.description_outlined, 'Description'),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: controller.overviewController,
+                              maxLines: 4,
+                              decoration: deco('Overview *', multi: true),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: controller.nearByController,
+                                    maxLines: 4,
+                                    decoration: deco('Near By *', multi: true),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: TextField(
+                                    controller:
+                                        controller.additionalDetailsController,
+                                    maxLines: 4,
+                                    decoration: deco('Additional Details *',
+                                        multi: true),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // PHOTOS
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: cardDeco,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            sectionTitle(
+                                Icons.photo_library_outlined, 'Photos *'),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Upload new photos. They will replace the current photos.',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 14),
+                            photos,
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      actions,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// DESKTOP VIEW
+// =============================================================================
+
+class QuickTechEditPropertyDesktopView extends StatelessWidget {
+  final PropertyDetailsController controller;
+  final VoidCallback onSubmit;
+  final VoidCallback onCancel;
+
+  const QuickTechEditPropertyDesktopView({
+    super.key,
+    required this.controller,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardDeco = BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+
+    InputDecoration deco(String label, {String? prefix, bool multi = false}) =>
+        InputDecoration(
+          labelText: label,
+          prefixText: prefix,
+          alignLabelWithHint: multi,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        );
+
+    Widget sectionTitle(IconData icon, String text) => Row(
+          children: [
+            Icon(icon, size: 22, color: Colors.black87),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        );
+
+    final countryField = Obx(
+      () => DropdownButtonFormField<Countries>(
+        value: controller.selectedCountry.value,
+        isExpanded: true,
+        decoration: deco('Country *'),
+        items: controller.countries
+            .map((c) => DropdownMenuItem<Countries>(
+                  value: c,
+                  child: Text(c.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onCountryChanged,
+      ),
+    );
+
+    final districtField = Obx(
+      () => DropdownButtonFormField<District>(
+        value: controller.selectedDistrict.value,
+        isExpanded: true,
+        decoration: deco('District *').copyWith(
+          suffixIcon: controller.isLoadingLocations.value
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : null,
+        ),
+        items: controller.districts
+            .map((d) => DropdownMenuItem<District>(
+                  value: d,
+                  child: Text(d.name ?? ''),
+                ))
+            .toList(),
+        onChanged: controller.onDistrictChanged,
+      ),
+    );
+
+    final photos = Obx(
+      () => Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (int i = 0; i < controller.newImageBytes.length; i++)
+            SizedBox(
+              width: 96,
+              height: 96,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        controller.newImageBytes[i],
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 3,
+                    right: 3,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: InkWell(
+                        onTap: () => controller.removeNewImage(i),
+                        child: const CircleAvatar(
+                          radius: 11,
+                          backgroundColor: Colors.black54,
+                          child:
+                              Icon(Icons.close, size: 14, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: InkWell(
+              onTap: controller.pickImages,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: mainColor.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade400),
+                ),
+                child: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_photo_alternate_outlined,
+                        size: 28, color: Colors.black87),
+                    SizedBox(height: 4),
+                    Text('Add', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final actions = Obx(
+      () => Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: ElevatedButton(
+                onPressed: controller.isUpdating.value ? null : onSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: mainColor,
+                  foregroundColor: Colors.black,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: controller.isUpdating.value
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                    : const Text('Update Property',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: OutlinedButton(
+                onPressed: controller.isUpdating.value ? null : onCancel,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Cancel',
+                    style: TextStyle(color: Colors.black87)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return SafeArea(
+      child: Column(
+        children: [
+          // TOP BAR
+          Padding(
+            padding: const EdgeInsets.fromLTRB(32, 20, 32, 14),
+            child: Row(
+              children: [
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: InkWell(
+                    onTap: onCancel,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new_rounded,
+                          size: 18),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Text(
+                    'Edit Property',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(32, 4, 32, 40),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ============ LEFT COLUMN (form) ============
+                      Expanded(
+                        flex: 7,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // BASIC INFO
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: cardDeco,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  sectionTitle(Icons.apartment_rounded,
+                                      'Basic Information'),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 3,
+                                        child: TextField(
+                                          controller:
+                                              controller.titleController,
+                                          decoration: deco('Title *'),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        flex: 2,
+                                        child: TextField(
+                                          controller: controller
+                                              .startingPriceController,
+                                          keyboardType: TextInputType.number,
+                                          decoration: deco(
+                                              'Starting Price / Night *',
+                                              prefix: '৳ '),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // LOCATION
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: cardDeco,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  sectionTitle(
+                                      Icons.location_on_outlined, 'Location'),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(child: countryField),
+                                      const SizedBox(width: 16),
+                                      Expanded(child: districtField),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  TextField(
+                                    controller: controller.addressController,
+                                    decoration: deco('Address *'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // DESCRIPTION
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: cardDeco,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  sectionTitle(Icons.description_outlined,
+                                      'Description'),
+                                  const SizedBox(height: 16),
+                                  TextField(
+                                    controller: controller.overviewController,
+                                    maxLines: 5,
+                                    decoration: deco('Overview *', multi: true),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller:
+                                              controller.nearByController,
+                                          maxLines: 4,
+                                          decoration:
+                                              deco('Near By *', multi: true),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: TextField(
+                                          controller: controller
+                                              .additionalDetailsController,
+                                          maxLines: 4,
+                                          decoration: deco(
+                                              'Additional Details *',
+                                              multi: true),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 24),
+
+                      // ============ RIGHT COLUMN (photos + actions) ============
+                      SizedBox(
+                        width: 360,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: cardDeco,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  sectionTitle(
+                                      Icons.photo_library_outlined, 'Photos *'),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Upload new photos. They will replace the current photos.',
+                                    style: TextStyle(
+                                        fontSize: 12, color: Colors.grey[600]),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  photos,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: cardDeco,
+                              child: actions,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

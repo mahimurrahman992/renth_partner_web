@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:renth_manager/consts/consts.dart';
 
 import 'package:renth_manager/model/property_list_model.dart';
+import 'package:renth_manager/page/property_details/quick_tech_property_details.dart';
 
 class QuickTechHomePage extends StatefulWidget {
   const QuickTechHomePage({super.key});
@@ -225,9 +226,8 @@ class QuickTechHomeMobileView extends StatelessWidget {
                               onTap:
                                   () =>
                                       dashboardController
-                                              .isBalanceVisible
-                                              .value =
-                                          !dashboardController
+                                          .isBalanceVisible
+                                          .value = !dashboardController
                                               .isBalanceVisible
                                               .value,
                               child: Container(
@@ -367,14 +367,44 @@ class QuickTechHomeMobileView extends StatelessWidget {
                     properties.map((prop) {
                       return DropdownMenuItem<Properties>(
                         value: prop,
-                        child: Text(
-                          prop.title ?? '',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                prop.title ?? '',
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                if (Navigator.canPop(context)) {
+                                  Navigator.pop(context);
+                                }
+                                Get.to(
+                                  () => QuickTechPropertyDetails(
+                                    propertyId: prop.id,
+                                  ),
+                                )?.then(
+                                  (_) =>
+                                      editPropertyController
+                                          .fetchAllProperties(),
+                                );
+                              },
+                              child: Text(
+                                'Details',
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
@@ -741,21 +771,24 @@ class QuickTechHomeTabletView extends StatelessWidget {
                                   color:
                                       action['isPrimary'] as bool
                                           ? Colors.black87
-                                          : ((action['accentColor'] as Color?) ??
+                                          : ((action['accentColor']
+                                                  as Color?) ??
                                               textColor),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   action['label'] as String,
-                                  style: QuickTechAppTextStyle.button().copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                        action['isPrimary'] as bool
-                                            ? Colors.black87
-                                            : ((action['accentColor'] as Color?) ??
-                                                textColor),
-                                  ),
+                                  style: QuickTechAppTextStyle.button()
+                                      .copyWith(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            action['isPrimary'] as bool
+                                                ? Colors.black87
+                                                : ((action['accentColor']
+                                                        as Color?) ??
+                                                    textColor),
+                                      ),
                                 ),
                               ],
                             ),
@@ -885,6 +918,32 @@ class QuickTechHomeTabletView extends StatelessWidget {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (selected?.id != null) ...[
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: () {
+                              Get.to(
+                                () => QuickTechPropertyDetails(
+                                  propertyId: selected!.id,
+                                ),
+                              )?.then(
+                                (_) =>
+                                    editPropertyController.fetchAllProperties(),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Details',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
@@ -1237,7 +1296,8 @@ class QuickTechHomeTabletView extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () => Get.toNamed(AppRoutes.addNewProperty),
+                          onPressed:
+                              () => Get.toNamed(AppRoutes.addNewProperty),
                           child: const Text(
                             "Add First Property",
                             style: TextStyle(
@@ -1492,21 +1552,24 @@ class QuickTechHomeDesktopView extends StatelessWidget {
                                   color:
                                       action['isPrimary'] as bool
                                           ? Colors.black87
-                                          : ((action['accentColor'] as Color?) ??
+                                          : ((action['accentColor']
+                                                  as Color?) ??
                                               textColor),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   action['label'] as String,
-                                  style: QuickTechAppTextStyle.button().copyWith(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                        action['isPrimary'] as bool
-                                            ? Colors.black87
-                                            : ((action['accentColor'] as Color?) ??
-                                                textColor),
-                                  ),
+                                  style: QuickTechAppTextStyle.button()
+                                      .copyWith(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            action['isPrimary'] as bool
+                                                ? Colors.black87
+                                                : ((action['accentColor']
+                                                        as Color?) ??
+                                                    textColor),
+                                      ),
                                 ),
                               ],
                             ),
@@ -1636,6 +1699,32 @@ class QuickTechHomeDesktopView extends StatelessWidget {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: textColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (selected?.id != null) ...[
+                          const SizedBox(width: 8),
+                          TextButton.icon(
+                            onPressed: () {
+                              Get.to(
+                                () => QuickTechPropertyDetails(
+                                  propertyId: selected!.id,
+                                ),
+                              )?.then(
+                                (_) =>
+                                    editPropertyController.fetchAllProperties(),
+                              );
+                            },
+                            icon: const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 16,
+                            ),
+                            label: const Text(
+                              'Details',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
@@ -1988,7 +2077,8 @@ class QuickTechHomeDesktopView extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-                          onPressed: () => Get.toNamed(AppRoutes.addNewProperty),
+                          onPressed:
+                              () => Get.toNamed(AppRoutes.addNewProperty),
                           child: const Text(
                             "Add First Property",
                             style: TextStyle(
