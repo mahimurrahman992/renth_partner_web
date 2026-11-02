@@ -14,6 +14,7 @@ import 'package:renth_manager/page/quick_tech_room_management/quick_tech_room_ma
 import 'package:renth_manager/page/recent_booking/quick_tech_recent_booking_screen.dart';
 import 'package:renth_manager/widgets/appar/quick_tech_custom_appbar.dart';
 import 'package:renth_manager/widgets/custom_responsive_helper.dart';
+import 'package:renth_manager/widgets/custom_welcome_popup.dart';
 import 'package:renth_manager/widgets/drawer/quick_tech_custom_drawer.dart';
 
 class QuickTechDashboard extends StatefulWidget {
@@ -62,71 +63,75 @@ class _QuickTechDashboardState extends State<QuickTechDashboard> {
             // MOBILE LAYOUT:
             // Top Appbar + Content + Curved Bottom Nav + Slide Drawer
             // =========================================================
-            return Scaffold(
-              key: dashBoardController.scaffoldKey,
-              drawer: const CustomDrawer(isPermanentSidebar: false),
-              backgroundColor: backgroundColor,
-              body: SafeArea(
-                child: Column(
-                  children: [
-                    customAppbar(context),
-                    Expanded(
-                      child: Obx(
-                        () => navBody.elementAt(
-                          dashBoardController.currentIndex.value,
-                        ),
-                      ).animate().fadeIn(duration: 250.ms),
-                    ),
-                  ],
+            return CustomWelcomePopup(
+              child: Scaffold(
+                key: dashBoardController.scaffoldKey,
+                drawer: const CustomDrawer(isPermanentSidebar: false),
+                backgroundColor: backgroundColor,
+                body: SafeArea(
+                  child: Column(
+                    children: [
+                      customAppbar(context),
+                      Expanded(
+                        child: Obx(
+                          () => navBody.elementAt(
+                            dashBoardController.currentIndex.value,
+                          ),
+                        ).animate().fadeIn(duration: 250.ms),
+                      ),
+                    ],
+                  ),
                 ),
+                bottomNavigationBar: Obx(() {
+                  return QuickTechCurvedNavBar(
+                    selectedIndex: dashBoardController.currentIndex.value,
+                    icons: const [
+                      Icons.grid_view_rounded,
+                      Icons.bed_rounded,
+                      Icons.add_home_rounded,
+                      Icons.receipt_long_outlined,
+                      Icons.person_pin_rounded,
+                    ],
+                    onTap: dashBoardController.onItemTapped,
+                  );
+                }),
               ),
-              bottomNavigationBar: Obx(() {
-                return QuickTechCurvedNavBar(
-                  selectedIndex: dashBoardController.currentIndex.value,
-                  icons: const [
-                    Icons.grid_view_rounded,
-                    Icons.bed_rounded,
-                    Icons.add_home_rounded,
-                    Icons.receipt_long_outlined,
-                    Icons.person_pin_rounded,
-                  ],
-                  onTap: dashBoardController.onItemTapped,
-                );
-              }),
             );
           } else {
             // =========================================================
             // TABLET & DESKTOP LAYOUT:
             // Permanent Left Sidebar + Top Bar with TextButtons (NO Bottom Nav)
             // =========================================================
-            return Scaffold(
-              backgroundColor: backgroundColor,
-              body: Row(
-                children: [
-                  // Permanent Left Sidebar Drawer (Visible on all tabs)
-                  const CustomDrawer(isPermanentSidebar: true),
-
-                  // Main Content Canvas
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Professional Top App Bar with Navigation TextButtons
-                        customAppbar(context),
-
-                        // Active Tab View Content
-                        Expanded(
-                          child: Obx(
-                            () => navBody.elementAt(
-                              dashBoardController.currentIndex.value,
-                            ),
-                          ).animate().fadeIn(duration: 200.ms),
-                        ),
-                      ],
+            return CustomWelcomePopup(
+              child: Scaffold(
+                backgroundColor: backgroundColor,
+                body: Row(
+                  children: [
+                    // Permanent Left Sidebar Drawer (Visible on all tabs)
+                    const CustomDrawer(isPermanentSidebar: true),
+              
+                    // Main Content Canvas
+                    Expanded(
+                      child: Column(
+                        children: [
+                          // Professional Top App Bar with Navigation TextButtons
+                          customAppbar(context),
+              
+                          // Active Tab View Content
+                          Expanded(
+                            child: Obx(
+                              () => navBody.elementAt(
+                                dashBoardController.currentIndex.value,
+                              ),
+                            ).animate().fadeIn(duration: 200.ms),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                bottomNavigationBar: null, // No bottom nav on desktop/tablet!
               ),
-              bottomNavigationBar: null, // No bottom nav on desktop/tablet!
             );
           }
         },
